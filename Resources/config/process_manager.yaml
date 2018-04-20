@@ -1,0 +1,41 @@
+services:
+    _defaults:
+        autowire: false
+        autoconfigure: false
+        public: false
+
+    SuRiKmAn\ProcessManagerBundle\ProcessManager\Generator\ProcessIdGeneratorInterface: '@SuRiKmAn\ProcessManagerBundle\ProcessManager\Generator\UuidProcessIdGenerator'
+
+    SuRiKmAn\ProcessManagerBundle\Domain\Event\DomainEventStorage: ~
+
+    SuRiKmAn\ProcessManagerBundle\Domain\Event\EventAggregatorAspect:
+        arguments:
+            $eventStorage: '@SuRiKmAn\ProcessManagerBundle\Domain\Event\DomainEventStorage'
+        tags:
+            - {name: goaop.aspect}
+
+    SuRiKmAn\ProcessManagerBundle\CommandBus\DomainEventDispatcherCommandBusDecorator:
+        decorates: SuRiKmAn\ProcessManagerBundle\CommandBus\CommandBusInterface
+        arguments:
+            $delegate: '@SuRiKmAn\ProcessManagerBundle\CommandBus\DomainEventDispatcherCommandBusDecorator.inner'
+            $eventBus: '@SuRiKmAn\ProcessManagerBundle\EventBus\EventBusInterface'
+            $eventStorage: '@SuRiKmAn\ProcessManagerBundle\Domain\Event\DomainEventStorage'
+
+    surikman_process_manager.uuid_factory:
+        class: Ramsey\Uuid\UuidFactory
+
+    SuRiKmAn\ProcessManagerBundle\ProcessManager\Generator\UuidProcessIdGenerator:
+        arguments:
+            $uuidFactory: '@surikman_process_manager.uuid_factory'
+
+    SuRiKmAn\ProcessManagerBundle\ProcessManager\ProcessConfigurationFactory: ~
+    SuRiKmAn\ProcessManagerBundle\ProcessManager\ProcessFactory:
+        arguments:
+            $idGenerator: '@SuRiKmAn\ProcessManagerBundle\ProcessManager\Generator\ProcessIdGeneratorInterface'
+
+    SuRiKmAn\ProcessManagerBundle\ProcessManager\ProcessManager:
+        abstract: true
+        arguments:
+            $commandBus: '@SuRiKmAn\ProcessManagerBundle\CommandBus\CommandBusInterface'
+            $processFactory: '@SuRiKmAn\ProcessManagerBundle\ProcessManager\ProcessFactory'
+            $configuration: ~ #will be setup in extension by configuration

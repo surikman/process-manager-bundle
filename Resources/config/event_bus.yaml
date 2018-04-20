@@ -1,0 +1,11 @@
+services:
+    _defaults:
+        autowire: false
+        autoconfigure: false
+        public: false
+
+    League\Event\Emitter: ~
+
+    SuRiKmAn\ProcessManagerBundle\EventBus\LeagueEventBus:
+        arguments:
+            $emitter: '@League\Event\Emitter'

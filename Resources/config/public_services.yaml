@@ -1,0 +1,9 @@
+services:
+    _defaults:
+        public: true
+
+    surikman_process_manager.logger: '@Psr\Log\LoggerInterface'
+
+    SuRiKmAn\ProcessManagerBundle\EventBus\EventBusInterface: '@SuRiKmAn\ProcessManagerBundle\EventBus\LeagueEventBus'
+    SuRiKmAn\ProcessManagerBundle\CommandBus\CommandBusInterface: '@SuRiKmAn\ProcessManagerBundle\CommandBus\CommandBus'
+

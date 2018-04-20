@@ -1,0 +1,82 @@
+services:
+    _defaults:
+        public: false
+        autowire: false
+        autoconfigure: false
+
+    SuRiKmAn\ProcessManagerBundle\CommandBus\Router\Metadata\MetadataDriver: ~
+    SuRiKmAn\ProcessManagerBundle\CommandBus\Router\RegistryInterface: '@SuRiKmAn\ProcessManagerBundle\CommandBus\Router\Registry'
+    SuRiKmAn\ProcessManagerBundle\CommandBus\Router\Route\RouteFactoryInterface: '@SuRiKmAn\ProcessManagerBundle\CommandBus\Router\Route\RouteFactory'
+    SuRiKmAn\ProcessManagerBundle\CommandBus\Router\RouterInterface: '@SuRiKmAn\ProcessManagerBundle\CommandBus\Router\ContainerAwareRouter'
+
+    surikman_process_manager.command_bus.metadata_factory:
+        class: Metadata\MetadataFactory
+        arguments:
+            $driver: '@SuRiKmAn\ProcessManagerBundle\CommandBus\Router\Metadata\MetadataDriver'
+
+    SuRiKmAn\ProcessManagerBundle\CommandBus\Middleware\RouterMiddleware:
+        arguments:
+            $router: '@SuRiKmAn\ProcessManagerBundle\CommandBus\Router\RouterInterface'
+        tags:
+            - {name: surikman_process_manager.command_bus.middleware }
+
+    SuRiKmAn\ProcessManagerBundle\CommandBus\LeagueCommandBusFactory:
+        arguments:
+            $services:
+                - '@SuRiKmAn\ProcessManagerBundle\CommandBus\Middleware\RouterMiddleware'
+
+    League\Tactician\CommandBus:
+        factory: 'SuRiKmAn\ProcessManagerBundle\CommandBus\LeagueCommandBusFactory:create'
+
+    SuRiKmAn\ProcessManagerBundle\CommandBus\CommandBus:
+        arguments:
+            $commandBus: '@League\Tactician\CommandBus'
+
+    SuRiKmAn\ProcessManagerBundle\CommandBus\EventTriggeringCommandBus:
+        decorates: SuRiKmAn\ProcessManagerBundle\CommandBus\CommandBusInterface
+        decoration_priority: 100
+        arguments:
+            $delegate: '@SuRiKmAn\ProcessManagerBundle\CommandBus\EventTriggeringCommandBus.inner'
+            $eventBus: '@SuRiKmAn\ProcessManagerBundle\EventBus\EventBusInterface'
+
+    SuRiKmAn\ProcessManagerBundle\CommandBus\LoggingCommandBus:
+        decorates: SuRiKmAn\ProcessManagerBundle\CommandBus\CommandBusInterface
+        decoration_priority: 99
+        arguments:
+            $delegate: '@SuRiKmAn\ProcessManagerBundle\CommandBus\LoggingCommandBus.inner'
+            $registry: '@SuRiKmAn\ProcessManagerBundle\CommandBus\Router\RegistryInterface'
+            $logger: '@surikman_process_manager.logger'
+            $level: 'debug' # todo add to configuration
+
+    SuRiKmAn\ProcessManagerBundle\CommandBus\Router\Registry:
+        arguments:
+            $routeFactory: '@SuRiKmAn\ProcessManagerBundle\CommandBus\Router\Route\CachedRouteFactory'
+            $collector: '@SuRiKmAn\ProcessManagerBundle\CommandBus\Router\Collector\CommandHandlerCollector'
+
+    SuRiKmAn\ProcessManagerBundle\CommandBus\Router\Route\RouteFactory:
+        arguments:
+            $metadata: '@surikman_process_manager.command_bus.metadata_factory'
+
+    SuRiKmAn\ProcessManagerBundle\CommandBus\Router\Route\CachedRouteFactory:
+        decorates: SuRiKmAn\ProcessManagerBundle\CommandBus\Router\Route\RouteFactoryInterface
+        arguments:
+            $delegate: '@SuRiKmAn\ProcessManagerBundle\CommandBus\Router\Route\CachedRouteFactory.inner'
+            $cacheDir: '%kernel.cache_dir%'
+            $isDebug: '%kernel.debug%'
+
+    SuRiKmAn\ProcessManagerBundle\CommandBus\Router\ContainerAwareRouter:
+        arguments:
+            $registry: '@SuRiKmAn\ProcessManagerBundle\CommandBus\Router\RegistryInterface'
+            $container: '@service_container'
+
+    SuRiKmAn\ProcessManagerBundle\CommandBus\Router\RegistryCacheWarmer:
+        arguments:
+            $registry: '@surikman_process_manager.command_bus.not_cached_registry'
+        tags:
+            - {name: kernel.cache_warmer}
+
+    surikman_process_manager.command_bus.not_cached_registry:
+        class: SuRiKmAn\ProcessManagerBundle\CommandBus\Router\Registry
+        arguments:
+            $routeFactory: '@SuRiKmAn\ProcessManagerBundle\CommandBus\Router\Route\RouteFactoryInterface'
+            $collector: '@SuRiKmAn\ProcessManagerBundle\CommandBus\Router\Collector\CommandHandlerCollector'
